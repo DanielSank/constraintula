@@ -16,15 +16,30 @@ class Resonator:
             impedance - sympy.sqrt(inductance / capacitance)
         ])
 
-        self.symbols = set(symbol for constraint in self.constraints
-                           for symbol in constraint.free_symbols)
+        self._symbols = [inductance, capacitance, impedance, frequency]
 
-        self.set_symbols = set()
+        self._set_symbols = {}
+
+    @property
+    def symbols(self):
+        return self._symbols
+
+    def is_set(self, symbol):
+        return symbol in self._set_symbols
 
     def set_parameter(self, symbol, value):
         if symbol in self._set_symbols:
             raise ValueError("Symbol {} already set".format(symbol))
-        self.set_symbols.add(symbol)
+        self._set_symbols[symbol] = value
 
     def check_constraints(self):
-        free_symbols = set()
+        go_again = False
+        free_symbols = set(self._symbols) - set(self._set_symbols.keys())
+        print("Free symbols: {}".format(free_symbols))
+        exprs = sympy.solve(self.constraints, *list(free_symbols), dict=True)[0]
+
+        print("Expressions: {}".format(exprs))
+
+        for symbol, expr in exprs.items():
+            if len(expr.free_symbols - set(self._set_symbols.keys())) == 0:
+                self._set_symbols[symbol] = expr.subs(symbol, self._set_symbols)
