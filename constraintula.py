@@ -2,7 +2,6 @@ import sympy
 
 
 class Resonator:
-
     def __init__(self):
         self._initialize()
 
@@ -14,10 +13,11 @@ class Resonator:
 
         self.constraints = set([
             frequency - 1 / sympy.sqrt(inductance * capacitance),
-            impedance - sympy.sqrt(inductance / capacitance)])
+            impedance - sympy.sqrt(inductance / capacitance)
+        ])
 
         self.symbols = set(symbol for constraint in self.constraints
-                for symbol in constraint.free_symbols)
+                           for symbol in constraint.free_symbols)
 
         self.set_symbols = set()
 
