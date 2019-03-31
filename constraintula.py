@@ -1,31 +1,14 @@
 import sympy
 
 
-class Resonator:
-    def __init__(self):
-        self.equations = self._initialize()
+class Constraintulary:
+    def __init__(self, equations):
+        self.equations = equations
         self._symbols = set().union(
             *[equation.free_symbols for equation in self.equations])
 
         self._explicitly_constrained_symbols = set()
         self.solutions = {}
-
-    def _initialize(self):
-        inductance = sympy.Symbol('L')
-        capacitance = sympy.Symbol('C')
-        impedance = sympy.Symbol('Z')
-        frequency = sympy.Symbol('omega')
-        resistance = sympy.Symbol('R')
-        quality_factor = sympy.Symbol('Q')
-
-        equations = set([
-            frequency - 1 / sympy.sqrt(inductance * capacitance),
-            impedance - sympy.sqrt(inductance / capacitance),
-            quality_factor - resistance / impedance,
-            ])
-
-
-        return equations
 
     @property
     def symbols(self):
