@@ -1,7 +1,7 @@
 import sympy
 
 
-class ResonatorSolve:
+class Resonator:
     def __init__(self):
         self._symbols, self.constraints = self._initialize()
         self._set_symbols = set()
