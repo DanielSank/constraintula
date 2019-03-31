@@ -3,8 +3,8 @@ import sympy
 
 class Resonator:
     def __init__(self):
-        self._symbols, self.constraints = self._initialize()
-        self._explicitly_set_symbols = set()  # Symbols *explicitly* set.
+        self._symbols, self.equations = self._initialize()
+        self._explicitly_constrained_symbols = set()
         self.solutions = {}
 
     def _initialize(self):
@@ -15,45 +15,52 @@ class Resonator:
         resistance = sympy.Symbol('R')
         quality_factor = sympy.Symbol('Q')
 
-        constraints = set([
+        equations = set([
             frequency - 1 / sympy.sqrt(inductance * capacitance),
             impedance - sympy.sqrt(inductance / capacitance),
             quality_factor - resistance / impedance,
             ])
 
         symbols = set().union(
-            *[constraint.free_symbols for constraint in constraints])
+            *[equation.free_symbols for equation in equations])
 
-        return symbols, constraints
+        return symbols, equations
 
     @property
     def symbols(self):
+        """Alphabetical list of symbols for this object."""
         return sorted(self._symbols, key=lambda x: x.name)
 
-    def set_parameter(self, symbol):
-        self._set_parameter(symbol)
+    def constrain_symbol(self, symbol):
+        """Explicitly mark a symbol as constrained.
+
+        Args:
+            symbol: The symbol to set. To get a list of symbols for this object,
+                use the 'symbols' attribute.
+        """
+        self._constrain_symbol(symbol)
         while 1:
-            solutions = self.check_for_solutions()
+            solutions = self._check_for_solutions()
             if not len(solutions):
                 break
             for symbol, expression in solutions:
                 self.solutions[symbol] = expression
 
-    def _set_parameter(self, symbol):
-        if symbol in self._explicitly_set_symbols:
+    def _constrain_symbol(self, symbol):
+        if symbol in self._explicitly_constrained_symbols:
             raise ValueError("Symbol {} already explicitly set".format(symbol))
         if symbol in self.solutions:
             raise ValueError("Symbol {} already solved via {}".format(
                 symbol, self.solutions[symbol]))
-        self._explicitly_set_symbols.add(symbol)
+        self._explicitly_constrained_symbols.add(symbol)
         self.solutions[symbol] = symbol
 
-    def check_for_solutions(self):
+    def _check_for_solutions(self):
         if len(self._symbols - set(self.solutions.keys())) == 0:
             return set()
 
         symbols, expression_sets = sympy.solve(
-            self.constraints,
+            self.equations,
             set(self._symbols) - set(self.solutions.keys()),
             set=True,)
         expressions = expression_sets.pop()
