@@ -4,7 +4,7 @@ import sympy
 class Resonator:
     def __init__(self):
         self._symbols, self.constraints = self._initialize()
-        self._set_symbols = set()  # Symbols *explicitly* set.
+        self._explicitly_set_symbols = set()  # Symbols *explicitly* set.
         self.solutions = {}
 
     def _initialize(self):
@@ -40,12 +40,12 @@ class Resonator:
                 self.solutions[symbol] = expression
 
     def _set_parameter(self, symbol):
-        if symbol in self._set_symbols:
+        if symbol in self._explicitly_set_symbols:
             raise ValueError("Symbol {} already explicitly set".format(symbol))
         if symbol in self.solutions:
             raise ValueError("Symbol {} already solved via {}".format(
                 symbol, self.solutions[symbol]))
-        self._set_symbols.add(symbol)
+        self._explicitly_set_symbols.add(symbol)
         self.solutions[symbol] = symbol
 
     def check_for_solutions(self):
