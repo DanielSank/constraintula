@@ -1,14 +1,13 @@
-import constraintula
-import sympy
+from constraintula import Constraintulary, Symbol
 
 
 def make_resonator():
-    inductance = sympy.Symbol('L')
-    capacitance = sympy.Symbol('C')
-    impedance = sympy.Symbol('Z')
-    frequency = sympy.Symbol('omega')
-    resistance = sympy.Symbol('R')
-    quality_factor = sympy.Symbol('Q')
+    inductance = Symbol('L')
+    capacitance = Symbol('C')
+    impedance = Symbol('Z')
+    frequency = Symbol('omega')
+    resistance = Symbol('R')
+    quality_factor = Symbol('Q')
 
     equations = set([
         frequency - 1 / sympy.sqrt(inductance * capacitance),

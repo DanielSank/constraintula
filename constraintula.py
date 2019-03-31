@@ -1,4 +1,5 @@
 import sympy
+from sympy import Symbol
 
 
 class Constraintulary:
