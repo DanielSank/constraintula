@@ -1,5 +1,5 @@
 import sympy
-from sympy import Symbol
+from sympy import Symbol, symbols, sqrt
 
 
 class System:
@@ -15,6 +15,19 @@ class System:
     def symbols(self):
         """Alphabetical list of symbols for this object."""
         return sorted(self._symbols, key=lambda x: x.name)
+
+    def evaluate(self, values):
+        if not len(self.solutions) == len(self.symbols):
+            raise ValueError("System not yet fully constrained")
+        if not set(values.keys()) == self._explicitly_constrained_symbols:
+            raise ValueError("Values must match explicitly set symbols")
+
+        results = {}
+        for (symbol, expression) in self.solutions.items():
+            substitutions = [(symb, values[symb])
+                    for symb in self._explicitly_constrained_symbols]
+            results[symbol] = sympy.N(expression.subs(substitutions))
+        return results
 
     def constrain_symbol(self, symbol) -> bool:
         """Explicitly mark a symbol as constrained.
@@ -35,6 +48,8 @@ class System:
 
         if len(self.solutions) == len(self._symbols):
             fully_constrained = True
+            # TODO: Make sure that all calculated symbols are in terms of
+            # explicitly set symbols.
         else:
             fully_constrained = False
         return fully_constrained

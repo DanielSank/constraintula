@@ -1,4 +1,4 @@
-from constraintula import System, Symbol
+from constraintula import System, Symbol, sqrt
 
 
 def make_resonator():
@@ -10,9 +10,9 @@ def make_resonator():
     quality_factor = Symbol('Q')
 
     equations = set([
-        frequency - 1 / sympy.sqrt(inductance * capacitance),
-        impedance - sympy.sqrt(inductance / capacitance),
+        frequency - 1 / sqrt(inductance * capacitance),
+        impedance - sqrt(inductance / capacitance),
         quality_factor - resistance / impedance,
         ])
 
-    return constraintula.System(equations)
+    return System(equations)
