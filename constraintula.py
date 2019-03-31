@@ -31,12 +31,14 @@ class Resonator:
         """Alphabetical list of symbols for this object."""
         return sorted(self._symbols, key=lambda x: x.name)
 
-    def constrain_symbol(self, symbol):
+    def constrain_symbol(self, symbol) -> bool:
         """Explicitly mark a symbol as constrained.
 
         Args:
             symbol: The symbol to set. To get a list of symbols for this object,
                 use the 'symbols' attribute.
+
+        Returns True if the system is fully constrained, False otherwise.
         """
         self._constrain_symbol(symbol)
         while 1:
@@ -45,6 +47,12 @@ class Resonator:
                 break
             for symbol, expression in solutions:
                 self.solutions[symbol] = expression
+
+        if len(self.solutions) == len(self._symbols):
+            fully_constrained = True
+        else:
+            fully_constrained = False
+        return fully_constrained
 
     def _constrain_symbol(self, symbol):
         if symbol in self._explicitly_constrained_symbols:
