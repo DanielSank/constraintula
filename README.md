@@ -1,7 +1,7 @@
 # constraintula
 
 ```python
-from constraintula import Symbol, Constraintulary
+from constraintula import Symbol, System
 
 a = Symbol('a')
 b = Symbol('b')
@@ -10,7 +10,7 @@ product = Symbol('p')
 
 equations = set([product - (a * b), ratio - (a / b)])
 
-system = Constraintulary(equations)
+system = System(equations)
 
 system.constrain_symbol(ratio)
 system.constrain_symbol(product)

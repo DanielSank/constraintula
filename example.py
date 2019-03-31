@@ -1,4 +1,4 @@
-from constraintula import Constraintulary, Symbol
+from constraintula import System, Symbol
 
 
 def make_resonator():
@@ -15,4 +15,4 @@ def make_resonator():
         quality_factor - resistance / impedance,
         ])
 
-    return constraintula.Constraintulary(equations)
+    return constraintula.System(equations)
