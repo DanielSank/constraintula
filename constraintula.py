@@ -1,45 +1,69 @@
 import sympy
 
 
-class Resonator:
+class ResonatorSolve:
     def __init__(self):
-        self._initialize()
+        self._symbols, self.constraints = self._initialize()
+        self._set_symbols = set()
+        self.solutions = {}
 
     def _initialize(self):
         inductance = sympy.Symbol('L')
         capacitance = sympy.Symbol('C')
         impedance = sympy.Symbol('Z')
         frequency = sympy.Symbol('omega')
+        resistance = sympy.Symbol('R')
+        quality_factor = sympy.Symbol('Q')
 
-        self.constraints = set([
+        symbols = (
+            inductance,
+            capacitance,
+            resistance,
+            frequency,
+            impedance,
+            quality_factor,)
+
+        constraints = set([
             frequency - 1 / sympy.sqrt(inductance * capacitance),
-            impedance - sympy.sqrt(inductance / capacitance)
-        ])
+            impedance - sympy.sqrt(inductance / capacitance),
+            quality_factor - resistance / impedance,
+            ])
 
-        self._symbols = [inductance, capacitance, impedance, frequency]
-
-        self._set_symbols = {}
+        return symbols, constraints
 
     @property
     def symbols(self):
         return self._symbols
 
-    def is_set(self, symbol):
-        return symbol in self._set_symbols
+    def set_parameter(self, symbol):
+        self._set_parameter(symbol)
+        while 1:
+            solved = self.check_for_solutions()
+            if not len(solved):
+                break
+            for symbol in solved:
+                self._set_parameter(symbol)
 
-    def set_parameter(self, symbol, value):
+    def _set_parameter(self, symbol):
         if symbol in self._set_symbols:
             raise ValueError("Symbol {} already set".format(symbol))
-        self._set_symbols[symbol] = value
+        self._set_symbols.add(symbol)
 
-    def check_constraints(self):
-        go_again = False
-        free_symbols = set(self._symbols) - set(self._set_symbols.keys())
-        print("Free symbols: {}".format(free_symbols))
-        exprs = sympy.solve(self.constraints, *list(free_symbols), dict=True)[0]
+    def check_for_solutions(self):
+        if len(set(self.symbols) - self._set_symbols) == 0:
+            return set()
 
-        print("Expressions: {}".format(exprs))
+        symbols, expression_sets = sympy.solve(
+            self.constraints,
+            set(self._symbols) - self._set_symbols,
+            set=True,)
+        expressions = expression_sets.pop()
 
-        for symbol, expr in exprs.items():
-            if len(expr.free_symbols - set(self._set_symbols.keys())) == 0:
-                self._set_symbols[symbol] = expr.subs(symbol, self._set_symbols)
+        solved = set()
+        for symbol, expression in zip(symbols, expressions):
+            if not all(symbol in self._set_symbols for symbol in expression.free_symbols):
+                continue
+            print("Solved for {}".format(symbol))
+            solved.add(symbol)
+            self.solutions[symbol] = expression
+        return solved
