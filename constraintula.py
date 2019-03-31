@@ -3,7 +3,10 @@ import sympy
 
 class Resonator:
     def __init__(self):
-        self._symbols, self.equations = self._initialize()
+        self.equations = self._initialize()
+        self._symbols = set().union(
+            *[equation.free_symbols for equation in self.equations])
+
         self._explicitly_constrained_symbols = set()
         self.solutions = {}
 
@@ -21,10 +24,8 @@ class Resonator:
             quality_factor - resistance / impedance,
             ])
 
-        symbols = set().union(
-            *[equation.free_symbols for equation in equations])
 
-        return symbols, equations
+        return equations
 
     @property
     def symbols(self):
