@@ -2,7 +2,7 @@ import sympy
 from sympy import Symbol
 
 
-class Constraintulary:
+class System:
     def __init__(self, equations):
         self.equations = equations
         self._symbols = set().union(
