@@ -78,5 +78,5 @@ class System:
             if not all(symbol in set(self.solutions.keys()) for symbol in expression.free_symbols):
                 continue
             print("Solved for {}".format(symbol))
-            solutions.add((symbol, expression))
+            solutions.add((symbol, expression.subs(self.solutions.items())))
         return solutions
