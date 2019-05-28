@@ -3,13 +3,12 @@
 ```python
 import attr
 import constraintula
-import numpy
-
+import numpy as np
 
 PI = np.pi
 
-
 area, radius = constraintula.symbols('area radius')
+
 
 @constraintula.contrain([area - PI * radius**2])
 @attr.attrs(auto_attrib=True, frozen=True)
