@@ -31,6 +31,10 @@ setuptools.setup(
     long_description_content_type="text/markdown",
     url='https://github.com/DanielSank/constraintula',
     packages=setuptools.find_packages(),
+    install_requires=[
+        'sympy',
+        'typing',
+    ],
     classifiers=[
         "Programming Language :: Python :: 3",
         "Operating System :: OS Independent",
