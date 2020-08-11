@@ -25,7 +25,7 @@ class Circle:
 
     @property
     def area(self):
-        return PI * self.radius**2
+        return PI * self.radius ** 2
 
 
 @attr.dataclass

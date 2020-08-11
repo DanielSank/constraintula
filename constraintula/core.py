@@ -6,19 +6,18 @@ symbols:
     diameter
     perimeter
     area
-but there's only one degree of freedom because the symbols are constriained by
-a set of contraint equations:
+but there's only one degree of freedom because the symbols are constrained by
+a set of constraint equations:
     diameter - 2 radius = 0
     perimeter - 2 pi radius = 0
     area - pi radius^2 = 0 .
 This module provides classes that help handle this kind of situation. For
-example, one class allows you to delcare the symbols and their constriants, and
+example, one class allows you to declare the symbols and their constraints, and
 then choose a subset of the symbols to be considered independent. The class then
 provides functions that map the independents to the dependents.
 """
 import functools
 import inspect
-
 from typing import (
     Any,
     Callable,
@@ -71,21 +70,23 @@ class System:
         solutions: Maps symbols to expressions giving that symbol in terms of
             other symbols which have been explicitly constrained.
     """
+
     constraints: FrozenSet[Expr]
     symbols: FrozenSet[Symbol]
     independents: FrozenSet[Symbol]
     solutions: Mapping[Symbol, Expr]
 
     def __init__(
-            self,
-            constraints: Iterable[Expr],
-            independents: Optional[FrozenSet[Symbol]]=None,
-            solutions: Optional[Mapping[Symbol, Expr]]=None,):
+        self,
+        constraints: Iterable[Expr],
+        independents: Optional[FrozenSet[Symbol]] = None,
+        solutions: Optional[Mapping[Symbol, Expr]] = None,
+    ):
         self.constraints = frozenset(constraint for constraint in constraints)
 
-        self.symbols = frozenset(symbol
-                                 for constraint in self.constraints
-                                 for symbol in constraint.free_symbols)
+        self.symbols = frozenset(
+            symbol for constraint in self.constraints for symbol in constraint.free_symbols
+        )
 
         if independents is None:
             self.independents = frozenset()
@@ -97,9 +98,7 @@ class System:
         else:
             self.solutions = solutions
 
-    def evaluate(
-            self,
-            values: Mapping[Symbol, float],) -> Mapping[Symbol, float]:
+    def evaluate(self, values: Mapping[Symbol, float]) -> Mapping[Symbol, float]:
         """Numerically evaluate symbols given values for explicitly set ones.
 
         values: Mapping from symbol to its numeric value. May only contain
@@ -141,10 +140,9 @@ class System:
             possible more solutions.
         """
         if symbol in self.independents:
-            raise ValueError("Symbol {} already explicitly set".format(symbol))
+            raise ValueError(f"Symbol {symbol} already explicitly set")
         if symbol in self.solutions:
-            raise ValueError("Symbol {} already solved via {}".format(
-                symbol, self.solutions[symbol]))
+            raise ValueError(f"Symbol {symbol} already solved via {self.solutions[symbol]}")
         known_solutions = {symbol: symbol}
         known_solutions.update(self.solutions)
 
@@ -158,7 +156,8 @@ class System:
         return System(
             constraints=self.constraints,
             independents=self.independents.union({symbol}),
-            solutions=known_solutions,)
+            solutions=known_solutions,
+        )
 
     def _check_for_solutions(self, known_solutions) -> Mapping[Symbol, Expr]:
         # If we have as many known solutions as we do symbols, then we're done
@@ -168,9 +167,8 @@ class System:
 
         # Solve equations for symbols that don't already have solutions.
         symbols, expression_sets = sympy.solve(
-            self.constraints,
-            set(self.symbols) - set(known_solutions.keys()),
-            set=True,)
+            self.constraints, set(self.symbols) - set(known_solutions.keys()), set=True
+        )
         expressions = expression_sets.pop()
         # Chomp chomp...
         # sympy can find multiple solution sets for a set of equations and it
@@ -181,9 +179,7 @@ class System:
 
         solutions = {}
         for symbol, expression in zip(symbols, expressions):
-            if not all(
-                    symbol in set(known_solutions.keys())
-                    for symbol in expression.free_symbols):
+            if not all(symbol in set(known_solutions.keys()) for symbol in expression.free_symbols):
                 continue
             solutions[symbol] = expression.subs(known_solutions.items())
         return solutions
@@ -268,7 +264,7 @@ def constrain(constraints: Sequence[Expr]) -> Callable[[Type], Type]:
         circle_by_radius = Circle(radius=1)
 
     Using constrain in combination with the attr library makes mypy happy. The
-    two varients shown below require explicit signals to tell the typechecker
+    two variants shown below require explicit signals to tell the typechecker
     that we know what we're doing.
 
     Here's constrain with a vanilla class:
