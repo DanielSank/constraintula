@@ -19,3 +19,7 @@ class Circle:
 circle_from_radius = Circle(radius=2)
 circle_from_area = Circle(area=42)
 ```
+
+## Disclaimer
+
+This is not an officially supported Google product.
