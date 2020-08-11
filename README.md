@@ -11,7 +11,7 @@ area, radius = constraintula.symbols('area radius')
 
 
 @constraintula.contrain([area - PI * radius**2])
-@attr.attrs(auto_attrib=True, frozen=True)
+@attr.attrs(frozen=True)
 class Circle:
     radius: float
     area: float
