@@ -35,6 +35,14 @@ else:
 with open(README_FILENAME, "rt") as description_file:
     long_description = description_file.read()
 
+
+requirements = [
+    'attr',
+    'numpy',
+    'sympy',
+    'typing',
+]
+
 setuptools.setup(
     name='constraintula',
     version=version,
@@ -45,10 +53,12 @@ setuptools.setup(
     long_description_content_type="text/markdown",
     url='https://github.com/DanielSank/constraintula',
     packages=setuptools.find_packages(),
-    install_requires=[
-        'sympy',
-        'typing',
-    ],
+    install_requires=requirements,
+    extras_require={
+        'dev': [
+            'pytest',
+        ],
+    },
     classifiers=[
         "Programming Language :: Python :: 3",
         "Operating System :: OS Independent",
