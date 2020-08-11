@@ -26,11 +26,14 @@ from typing import (
     Iterable,
     Mapping,
     Optional,
+    overload,
     Sequence,
-    Type,)
+    Type,
+    Union,
+)
 
-import sympy  # type: ignore
-from sympy import Expr, Symbol
+import sympy
+from sympy import Expr, Symbol, symbols
 
 
 class System:
@@ -192,58 +195,71 @@ class System:
             functions[symbol] = sympy.lambdify(
                 sorted(list(expression.free_symbols), key=lambda x: x.name),
                 expression,
-                modules="numpy",)
+                modules="numpy",
+            )
         return functions
 
 
 def solve(
-        independents: Mapping[str, Any],
-        variables: Sequence[str],
-        constraints: Iterable[Expr],) -> Mapping[str, Any]:
+    independents: Mapping[str, Any], variables: Sequence[str], constraints: Iterable[Expr]
+) -> Mapping[str, Any]:
     assignments = {Symbol(k): v for k, v in independents.items()}
-    values = System(constraints).with_independents(assignments).evaluate(
-        assignments)
-    return {key: values[Symbol(key)] for key in variables if key != 'self'}
+    values = System(constraints).with_independents(assignments).evaluate(assignments)
+    return {k: values[Symbol(k)] for k in variables}
 
 
-def make_factory_for(cls, constraints):
-    init_arg_names = list(inspect.signature(cls.__init__).parameters.keys())
+def make_wrapper(
+    func: Callable, constraints: Sequence[Expr], skip_first_arg: bool = False
+) -> Callable:
+    """Wrap a function to allow calling with any complete set of parameters.
 
-    @functools.wraps(cls)
-    def factory(**kw):
-        all_kw = solve(kw, init_arg_names, constraints)
-        return cls(**all_kw)
+    Args:
+        func: Callable that takes keyword arguments.
+        constraints: Relationships that must hold between args to func.
+        skip_first_arg: If True, skip the first argument of func. This is useful
+            when making a wrapper for class methods that have a special first
+            argument like `self` or `cls`
 
-    return factory
-
-
-def _constrain_class(cls: Type, constraints: Sequence[Expr]) -> Type:
-    """Make a class initializable by any complete set of parameters.
-
-    This function is primarly used by the constrain decorator below.
+    Returns:
+        A new callable that takes any complete set of parameters for the given
+        constraints. We solve for the values of the unspecified parameters and
+        then call the given func.
     """
-    init_arg_names = list(inspect.signature(cls.__init__).parameters.keys())
+    arg_names = list(inspect.signature(func).parameters.keys())
+    if skip_first_arg:
+        arg_names = arg_names[skip_first_arg:]
 
-    orig = cls.__init__
+    @functools.lru_cache()
+    def get_system(indeps):
+        symbols = [Symbol(k) for k in indeps]
+        return System(constraints).with_independents(symbols)
 
-    @functools.wraps(orig)
-    def __init__(instance, **kw):
-        kwargs = solve(kw, init_arg_names, constraints)
-        orig(instance, **kwargs)
+    @functools.wraps(func)
+    def wrapper(*args, **kw):
+        indeps = tuple(sorted(kw))
+        system = get_system(indeps)
+        values = system.evaluate({Symbol(k): v for k, v in kw.items()})
+        kwargs = {k: values[Symbol(k)] for k in arg_names}
+        return func(*args, **kwargs)
 
-    cls.__init__ = __init__
-    return cls
+    return wrapper
 
 
 def constrain(constraints: Sequence[Expr]) -> Callable[[Type], Type]:
-    """Make a class initializable by any complete set of parameters.
+    """Make a function or class callable by any complete set of parameters.
 
-    It's recommended to use with the attr library for optimally DRY code:
+    This decorates a callable object, either a function or class, to make it
+    possible to call the object with any complete set of parameters. The
+    given constraints will then be solved to determine the values of the other
+    parameters and all values will be passed to the underlying function or
+    class constructor.
+
+    For classes, this can be used with the attr library for optimally DRY code:
 
         radius, area = constraintula.symbols('radius area')
 
         @constrain([area - pi * radius**2])
-        @attr.attrs(auto_attribs=True, frozen=True)
+        @attr.dataclass(frozen=True)
         class Circle:
             radius: float
             area: float
@@ -267,11 +283,13 @@ def constrain(constraints: Sequence[Expr]) -> Callable[[Type], Type]:
 
         circle = Circle(area=1)  # pylint: disable=no-value-for-parameter
 
-    The decorator knows to only pass ketwords that the class expects, so it
+    The decorator knows to only pass keywords that the class expects, so it
     can be used with classes that expect only a single independent subset of
     its interrelated attributes to be specified. Note, however, that in this
     case the relationship between the variables is written twice: once in
-    the call to constrain and again in the @property:
+    the call to constrain and again in the @property. In addition, pylint does
+    not know about the constraint decorator, so it will warn about calls that
+    use alternate parameters and the warning must be explicitly disabled.
 
         radius, area = constraintula.symbols('radius area')
 
@@ -283,6 +301,36 @@ def constrain(constraints: Sequence[Expr]) -> Callable[[Type], Type]:
             def area(self):
                 return pi * self.radius**2
 
-        circle = Circle(area=1)  # pylint: disable=no-value-for-parameter, unexpected-keywork-arg
+        circle = Circle(area=1)  # pylint: disable=no-value-for-parameter, unexpected-keyword-arg
     """
-    return lambda cls: _constrain_class(cls, constraints)
+    return _Constrainer(constraints)
+
+
+class _Constrainer:
+    """Implements the `constrain` decorator; see docstring above for details."""
+
+    def __init__(self, constraints: Sequence[Expr]):
+        self.constraints = constraints
+
+    # pylint: disable=function-redefined
+    @overload
+    def __call__(self, obj: Type) -> Type:
+        pass
+
+    @overload
+    def __call__(self, obj: Callable) -> Callable:
+        pass
+
+    def __call__(self, obj: Union[Type, Callable]) -> Union[Type, Callable]:
+        if isinstance(obj, type):
+            if obj.__new__ is not object.__new__:
+                method = '__new__'
+            else:
+                method = '__init__'
+            wrapped = make_wrapper(getattr(obj, method), self.constraints, skip_first_arg=True)
+            setattr(obj, method, wrapped)
+            return obj
+
+        return make_wrapper(obj, self.constraints, skip_first_arg=False)
+
+    # pylint: enable=function-redefined

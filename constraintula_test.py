@@ -1,11 +1,12 @@
+import collections
 import math
 
 import attr
 import numpy as np
 import pytest
+from sympy import Symbol
 
-import pyle.constraintula as constraintula
-from pyle.constraintula import Symbol
+import constraintula
 
 PI = np.pi
 
@@ -27,7 +28,7 @@ class Circle:
         return PI * self.radius**2
 
 
-@attr.attrs(auto_attribs=True)
+@attr.dataclass
 class Foo:
     x: float
     y: float
@@ -40,21 +41,15 @@ def test_constraintula():
     R = Symbol('R')  # radius
     A = Symbol('A')  # area
 
-    system = constraintula.System({
-        D - 2 * R,
-        C - PI * D,
-        A - 2 * PI * R**2,
-    }).with_independent(C)
+    system = constraintula.System({D - 2 * R, C - PI * D, A - 2 * PI * R ** 2}).with_independent(C)
 
     circle = Circle(system.evaluate({C: 10})[R])
     assert np.abs(circle.radius - 10 / (2 * PI)) < 0.001
 
 
-def test_make_factory_for():
+def test_make_wrapper():
     x, y, z = constraintula.symbols('x y z')
-    foo_factory = constraintula.make_factory_for(
-        Foo,
-        [x - y * z],)
+    foo_factory = constraintula.make_wrapper(Foo, [x - y * z])
     foo = foo_factory(y=2, z=3)
     assert math.isclose(foo.x, 6)
 
@@ -63,7 +58,7 @@ def test_constrain_with_attr():
     x, y, z = constraintula.symbols('x y z')
 
     @constraintula.constrain([x * y - z])
-    @attr.attrs(auto_attribs=True, frozen=True)
+    @attr.dataclass(frozen=True)
     class Bar:
         x: float
         y: float
@@ -71,6 +66,7 @@ def test_constrain_with_attr():
 
     bar = Bar(x=3, z=9)  # y should be 3
     assert math.isclose(bar.y, 3)
+    assert isinstance(bar, Bar)
     with pytest.raises(Exception):
         bar.x = 4
 
@@ -85,8 +81,11 @@ def test_constrain_with_vanilla_class():
             self.y = y
             self.z = z
 
-    baz = Baz(x=3, z=9)  # pylint: disable=no-value-for-parameter
+    # pylint: disable=no-value-for-parameter
+    baz = Baz(x=3, z=9)
+    # pylint: enable=no-value-for-parameter
     assert math.isclose(baz.y, 3)
+    assert isinstance(baz, Baz)
 
 
 def test_constrain_with_properties():
@@ -102,7 +101,36 @@ def test_constrain_with_properties():
         def z(self):
             return self.x * self.y
 
-    milton = Milton(x=3, z=9)  # pylint: disable=no-value-for-parameter, unexpected-keyword-arg
+    # pylint: disable=no-value-for-parameter, unexpected-keyword-arg
+    milton = Milton(x=3, z=9)
+    # pylint: enable=no-value-for-parameter, unexpected-keyword-arg
+    assert math.isclose(milton.y, 3)
+    assert isinstance(milton, Milton)
+    with pytest.raises(Exception):
+        milton.z = 4
+
+
+def test_constrain_named_tuple():
+    x, y, z = constraintula.symbols('x y z')
+
+    MiltonOriginal = collections.namedtuple('Milton', ['x', 'y', 'z'])
+    Milton = constraintula.constrain([x * y - z])(MiltonOriginal)
+    assert Milton is MiltonOriginal
+
+    milton = Milton(x=3, z=9)
     assert math.isclose(milton.y, 3)
     with pytest.raises(Exception):
         milton.z = 4
+
+
+def test_constrain_function():
+    radius, circumference = constraintula.symbols('radius circumference')
+
+    @constraintula.constrain([circumference - 2 * PI * radius])
+    def area(radius):
+        return PI * radius ** 2
+
+    # pylint: disable=no-value-for-parameter, unexpected-keyword-arg
+    result = area(circumference=1)
+    # pylint: enable=no-value-for-parameter, unexpected-keyword-arg
+    assert math.isclose(result, 1 / (PI * 4))
