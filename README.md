@@ -10,7 +10,7 @@ PI = np.pi
 area, radius = constraintula.symbols('area radius')
 
 
-@constraintula.contrain([area - PI * radius**2])
+@constraintula.constrain([area - PI * radius**2])
 @attr.attrs(frozen=True)
 class Circle:
     radius: float
