@@ -40,7 +40,7 @@ requirements = [
     'attr',
     'numpy',
     'sympy',
-    'typing; python_version < "3.5.0"';
+    'typing; python_version < "3.5.0"',
 ]
 
 setuptools.setup(
