@@ -102,6 +102,23 @@ def test_constrain_with_vanilla_class():
     assert isinstance(baz, Baz)
 
 
+def test_overrides():
+    x, y, z = constraintula.symbols('x y z')
+
+    @constraintula.constrain([x * y - z], allow_overrides=True)
+    class Baz:
+        def __init__(self, x, y, z):
+            self.x = x
+            self.y = y
+            self.z = z
+
+    # pylint: disable=no-value-for-parameter
+    baz = Baz(x=3, y=3, z=9)
+    # pylint: enable=no-value-for-parameter
+    assert math.isclose(baz.y, 3)
+    assert isinstance(baz, Baz)
+
+
 def test_constrain_with_properties():
     x, y, z = constraintula.symbols('x y z')
 
