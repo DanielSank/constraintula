@@ -102,6 +102,20 @@ def test_constrain_with_vanilla_class():
     assert isinstance(baz, Baz)
 
 
+def test_fail_on_overconstrian():
+    x, y, z = constraintula.symbols('x y z')
+
+    @constraintula.constrain([x * y - z])
+    class Baz:
+        def __init__(self, x, y, z):
+            self.x = x
+            self.y = y
+            self.z = z
+
+    with pytest.raises(ValueError):
+        baz = Baz(x=3, y=3, z=9)
+
+
 def test_overrides():
     x, y, z = constraintula.symbols('x y z')
 
