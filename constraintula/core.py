@@ -132,7 +132,11 @@ class System:
             results[symbol] = sympy.N(expression.subs(substitutions))
         return results
 
-    def with_independents(self, symbols: Iterable[Symbol]) -> 'System':
+    def with_independents(
+            self,
+            symbols: Iterable[Symbol],
+            override: bool=False,
+    ) -> 'System':
         """Get a new System with some symbols considered independent.
 
         Args:
@@ -140,25 +144,31 @@ class System:
         """
         system = self
         for symbol in symbols:
-            system = system.with_independent(symbol)
+            system = system.with_independent(symbol, override)
         return system
 
-    def with_independent(self, symbol: Symbol) -> 'System':
+    def with_independent(self, symbol: Symbol, override: bool=False) -> 'System':
         """Get a new System with a symbol constrained.
 
         Args:
             symbol: The symbol to set. To get a list of symbols for this object,
                 use the 'symbols' attribute.
+            override: If True, allow the symbol to be declared as independent
+                even if it has already been solved in terms of the other symbols.
+                If this happens, we drop the solution in terms of the other
+                symbols.
 
         Returns a new System with the additional constrained symbol, and
             possible more solutions.
         """
         if symbol in self.independents:
             raise ValueError(f"Symbol {symbol} already explicitly set")
-        if symbol in self.solutions:
+        if symbol in self.solutions and not override:
             raise ValueError(f"Symbol {symbol} already solved via {self.solutions[symbol]}")
         known_solutions = {symbol: symbol}
-        known_solutions.update(self.solutions)
+        for k, v in self.solutions.items():
+            if k not in known_solutions:
+                known_solutions[k] = v
 
         while True:
             new_solutions = self._check_for_solutions(known_solutions)
@@ -219,7 +229,10 @@ def solve(
 
 
 def make_wrapper(
-    func: Callable, constraints: Sequence[Expr], skip_first_arg: bool = False
+        func: Callable,
+        constraints: Sequence[Expr],
+        skip_first_arg: bool = False,
+        allow_overrides: bool=False,
 ) -> Callable:
     """Wrap a function to allow calling with any complete set of parameters.
 
@@ -242,7 +255,10 @@ def make_wrapper(
     @functools.lru_cache()
     def get_system(indeps):
         symbols = [Symbol(k) for k in indeps]
-        return System(constraints).with_independents(symbols)
+        return System(constraints).with_independents(
+                symbols,
+                allow_overrides,
+        )
 
     @functools.wraps(func)
     def wrapper(*args, **kw):
@@ -255,7 +271,10 @@ def make_wrapper(
     return wrapper
 
 
-def constrain(constraints: Sequence[Expr]) -> Callable[[Type], Type]:
+def constrain(
+        constraints: Sequence[Expr],
+        allow_overrides: bool=False,
+) -> Callable[[Type], Type]:
     """Make a function or class callable by any complete set of parameters.
 
     This decorates a callable object, either a function or class, to make it
@@ -313,14 +332,15 @@ def constrain(constraints: Sequence[Expr]) -> Callable[[Type], Type]:
 
         circle = Circle(area=1)  # pylint: disable=no-value-for-parameter, unexpected-keyword-arg
     """
-    return _Constrainer(constraints)
+    return _Constrainer(constraints, allow_overrides)
 
 
 class _Constrainer:
     """Implements the `constrain` decorator; see docstring above for details."""
 
-    def __init__(self, constraints: Sequence[Expr]):
+    def __init__(self, constraints: Sequence[Expr], allow_overrides: bool=False):
         self.constraints = constraints
+        self.allow_overrides = allow_overrides
 
     # pylint: disable=function-redefined
     @overload
@@ -337,10 +357,20 @@ class _Constrainer:
                 method = '__new__'
             else:
                 method = '__init__'
-            wrapped = make_wrapper(getattr(obj, method), self.constraints, skip_first_arg=True)
+            wrapped = make_wrapper(
+                    getattr(obj, method),
+                    self.constraints,
+                    skip_first_arg=True,
+                    allow_overrides=self.allow_overrides,
+            )
             setattr(obj, method, wrapped)
             return obj
 
-        return make_wrapper(obj, self.constraints, skip_first_arg=False)
+        return make_wrapper(
+                obj,
+                self.constraints,
+                skip_first_arg=False,
+                allow_overrides=self.allow_overrides,
+        )
 
     # pylint: enable=function-redefined
