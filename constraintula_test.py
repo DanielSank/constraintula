@@ -148,3 +148,37 @@ def test_constrain_function():
     result = area(circumference=1)
     # pylint: enable=no-value-for-parameter, unexpected-keyword-arg
     assert math.isclose(result, 1 / (PI * 4))
+
+
+def test_constrain_with_ints():
+    x, y, z = constraintula.symbols('x y z')
+
+    @constraintula.constrain([x * y - z])
+    @attr.dataclass(frozen=True)
+    class Bar:
+        x: int
+        y: int
+        z: int
+
+    bar = Bar(x=3, z=9)
+    assert bar.y == 3
+    assert isinstance(bar.y, int)
+
+
+def test_constrain_with_mixed_types():
+    x, y, z = constraintula.symbols('x y z')
+
+    @constraintula.constrain([x * y - z])
+    @attr.dataclass(frozen=True)
+    class Bar:
+        x: int
+        y: float
+        z: int
+
+    bar = Bar(x=2, z=5)  # y should be 2.5
+    assert bar.y == 2.5
+    assert isinstance(bar.y, float)
+
+    # There is no integral solution
+    with pytest.raises(ValueError):
+        Bar(x=1, y=0.1)
