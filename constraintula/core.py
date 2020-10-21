@@ -41,6 +41,7 @@ from typing import (
     Optional,
     overload,
     Sequence,
+    Set,
     Type,
     Union,
 )
@@ -75,12 +76,14 @@ class System:
     Once the system is created, constrain whichever set of symbols you want to
     think of as independent, e.g.
 
-        system.constrain_symbols([ratio, product])
+        system.with_independents([ratio, product])
 
     Attributes:
         constraints: Each element is an expression that constrains the
             relationships between the symbols. There's an implicit
             "equals zero", e.g. a/b - ratio means a/b - ratio = 0.
+        symbols: The set of free variables in the set of constraints.
+        independents: The set of symbols considered independent.
         solutions: Maps symbols to expressions giving that symbol in terms of
             other symbols which have been explicitly constrained.
     """
@@ -210,12 +213,22 @@ class System:
         return functions
 
 
-def solve(
-    independents: Mapping[str, Any], variables: Sequence[str], constraints: Iterable[Expr]
-) -> Mapping[str, Any]:
-    assignments = {Symbol(k): v for k, v in independents.items()}
-    values = System(constraints).with_independents(assignments).evaluate(assignments)
-    return {k: values[Symbol(k)] for k in variables}
+def collect_symbols(expr: sympy.Expr) -> Set[sympy.Symbol]:
+    """Collect all symbols in this expression.
+
+    Eg `x + y` -> `{Symbol('x'), Symbol('y')}.
+    """
+    symbols = set()
+
+    def walk(expr):
+        if isinstance(expr, Symbol):
+            symbols.add(expr)
+        else:
+            for arg in expr.args:
+                walk(arg)
+
+    walk(expr)
+    return symbols
 
 
 def make_wrapper(
@@ -235,21 +248,52 @@ def make_wrapper(
         constraints. We solve for the values of the unspecified parameters and
         then call the given func.
     """
-    arg_names = list(inspect.signature(func).parameters.keys())
+    parameters = inspect.signature(func).parameters
+    arg_types = list(
+        (k, int if ty.annotation is int else float) for k, ty in parameters.items()
+    )
     if skip_first_arg:
-        arg_names = arg_names[skip_first_arg:]
+        arg_types = arg_types[skip_first_arg:]
 
-    @functools.lru_cache()
-    def get_system(indeps):
-        symbols = [Symbol(k) for k in indeps]
-        return System(constraints).with_independents(symbols)
+    # Make a symbol for each arg. We can't use integer=(ty is int) because eg
+    # integer=False excludes real number solutions that happen to be integers.
+    arg_symbols = {
+        k: Symbol(k, integer=True) if ty is int else Symbol(k) for k, ty in arg_types
+    }
 
     @functools.wraps(func)
     def wrapper(*args, **kw):
-        indeps = tuple(sorted(kw))
-        system = get_system(indeps)
-        values = system.evaluate({Symbol(k): v for k, v in kw.items()})
-        kwargs = {k: values[Symbol(k)] for k in arg_names}
+        for k, val in kw.items():
+            if k not in arg_symbols:
+                arg_symbols[k] = Symbol(k)
+
+        # Collect all the symbols appearing in all constraints
+        constraint_symbols = [collect_symbols(constraint) for constraint in constraints]
+        constraint_symbols = set().union(*constraint_symbols)
+
+        # Rewrite all constraints so that we use the right symbol, eg
+        # `Symbol('x', integer=True)` rather than `Symbol('x')`.
+        for i, constraint in enumerate(constraints):
+            for sym in constraint_symbols:
+                if sym.name in arg_symbols:
+                    constraints[i] = constraints[i].subs(sym, arg_symbols[sym.name])
+
+        # Extend the set of explicit constraints with a constraint for each arg
+        # value.
+        extended_constraints = constraints + [arg_symbols[k] - v for k, v in kw.items()]
+
+        values = sympy.solve(extended_constraints)
+
+        # sympy sometimes returns a list of solutions, sometimes just a single
+        # dict.
+        if isinstance(values, list):
+            if not len(values):
+                raise ValueError("System has no solution")
+            values = values[0]
+
+        # Use `ty` to convert each solved value from the sympy type to either
+        # int or float. `values` is indexed by symbol rather than string.
+        kwargs = {k: ty(values[arg_symbols[k]]) for k, ty in arg_types}
         return func(*args, **kwargs)
 
     return wrapper

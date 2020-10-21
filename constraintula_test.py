@@ -68,6 +68,36 @@ def test_make_wrapper():
     assert math.isclose(foo.x, 6)
 
 
+def test_circle():
+    circumference, diameter, radius, area = \
+        constraintula.symbols('circumference diameter radius area')
+
+    @constraintula.constrain([
+        diameter - 2 * radius,
+        circumference - PI * diameter,
+        area - 2 * PI * radius ** 2
+    ])
+    class Circle:
+        def __init__(self, radius):
+            self.radius = radius
+
+        @property
+        def diameter(self):
+            return self.radius * 2
+
+        @property
+        def circumference(self):
+            return self.radius * 2 * PI
+
+        @property
+        def area(self):
+            return PI * self.radius ** 2
+
+    # pylint: disable=no-value-for-parameter, unexpected-keyword-arg
+    circle = Circle(circumference=10)
+    assert np.abs(circle.radius - 10 / (2 * PI)) < 0.001
+
+
 def test_constrain_with_attr():
     x, y, z = constraintula.symbols('x y z')
 
@@ -148,3 +178,37 @@ def test_constrain_function():
     result = area(circumference=1)
     # pylint: enable=no-value-for-parameter, unexpected-keyword-arg
     assert math.isclose(result, 1 / (PI * 4))
+
+
+def test_constrain_with_ints():
+    x, y, z = constraintula.symbols('x y z')
+
+    @constraintula.constrain([x * y - z])
+    @attr.dataclass(frozen=True)
+    class Bar:
+        x: int
+        y: int
+        z: int
+
+    bar = Bar(x=3, z=9)
+    assert bar.y == 3
+    assert isinstance(bar.y, int)
+
+
+def test_constrain_with_mixed_types():
+    x, y, z = constraintula.symbols('x y z')
+
+    @constraintula.constrain([x * y - z])
+    @attr.dataclass(frozen=True)
+    class Bar:
+        x: int
+        y: float
+        z: int
+
+    bar = Bar(x=2, z=5)  # y should be 2.5
+    assert bar.y == 2.5
+    assert isinstance(bar.y, float)
+
+    # There is no integral solution
+    with pytest.raises(ValueError):
+        Bar(x=1, y=0.1)
