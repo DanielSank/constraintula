@@ -68,6 +68,36 @@ def test_make_wrapper():
     assert math.isclose(foo.x, 6)
 
 
+def test_circle():
+    circumference, diameter, radius, area = \
+        constraintula.symbols('circumference diameter radius area')
+
+    @constraintula.constrain([
+        diameter - 2 * radius,
+        circumference - PI * diameter,
+        area - 2 * PI * radius ** 2
+    ])
+    class Circle:
+        def __init__(self, radius):
+            self.radius = radius
+
+        @property
+        def diameter(self):
+            return self.radius * 2
+
+        @property
+        def circumference(self):
+            return self.radius * 2 * PI
+
+        @property
+        def area(self):
+            return PI * self.radius ** 2
+
+    # pylint: disable=no-value-for-parameter, unexpected-keyword-arg
+    circle = Circle(circumference=10)
+    assert np.abs(circle.radius - 10 / (2 * PI)) < 0.001
+
+
 def test_constrain_with_attr():
     x, y, z = constraintula.symbols('x y z')
 

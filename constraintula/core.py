@@ -257,15 +257,15 @@ def make_wrapper(
 
     # Make a symbol for each arg. We can't use integer=(ty is int) because eg
     # integer=False excludes real number solutions that happen to be integers.
-    symbols = {
+    arg_symbols = {
         k: Symbol(k, integer=True) if ty is int else Symbol(k) for k, ty in arg_types
     }
 
     @functools.wraps(func)
     def wrapper(*args, **kw):
         for k, val in kw.items():
-            if k not in symbols:
-                symbols[k] = Symbol(k)
+            if k not in arg_symbols:
+                arg_symbols[k] = Symbol(k)
 
         # Collect all the symbols appearing in all constraints
         constraint_symbols = [collect_symbols(constraint) for constraint in constraints]
@@ -275,11 +275,12 @@ def make_wrapper(
         # `Symbol('x', integer=True)` rather than `Symbol('x')`.
         for i, constraint in enumerate(constraints):
             for sym in constraint_symbols:
-                constraints[i] = constraints[i].subs(sym, symbols[sym.name])
+                if sym.name in arg_symbols:
+                    constraints[i] = constraints[i].subs(sym, arg_symbols[sym.name])
 
         # Extend the set of explicit constraints with a constraint for each arg
         # value.
-        extended_constraints = constraints + [symbols[k] - v for k, v in kw.items()]
+        extended_constraints = constraints + [arg_symbols[k] - v for k, v in kw.items()]
 
         values = sympy.solve(extended_constraints)
 
@@ -292,7 +293,7 @@ def make_wrapper(
 
         # Use `ty` to convert each solved value from the sympy type to either
         # int or float. `values` is indexed by symbol rather than string.
-        kwargs = {k: ty(values[symbols[k]]) for k, ty in arg_types}
+        kwargs = {k: ty(values[arg_symbols[k]]) for k, ty in arg_types}
         return func(*args, **kwargs)
 
     return wrapper
