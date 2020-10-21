@@ -41,6 +41,7 @@ from typing import (
     Optional,
     overload,
     Sequence,
+    Set,
     Type,
     Union,
 )
@@ -212,7 +213,7 @@ class System:
         return functions
 
 
-def collect_symbols(expr):
+def collect_symbols(expr: sympy.Expr) -> Set[sympy.Symbol]:
     """Collect all symbols in this expression.
 
     Eg `x + y` -> `{Symbol('x'), Symbol('y')}.
