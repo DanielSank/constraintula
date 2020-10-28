@@ -210,5 +210,5 @@ def test_constrain_with_mixed_types():
     assert isinstance(bar.y, float)
 
     # There is no integral solution
-    with pytest.raises(ValueError):
+    with pytest.raises(constraintula.NoSolution):
         Bar(x=1, y=0.1)

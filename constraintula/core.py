@@ -50,6 +50,13 @@ import sympy
 from sympy import Expr, Symbol, symbols
 
 
+class NoSolution(Exception):
+    """Raised when a system has no solution."""
+
+    def __init__(self):
+        super().__init__("System has no solution")
+
+
 class System:
     """A system of constraints that can be solved for a subset of symbols.
 
@@ -288,7 +295,7 @@ def make_wrapper(
         # dict.
         if isinstance(values, list):
             if not len(values):
-                raise ValueError("System has no solution")
+                raise NoSolution()
             values = values[0]
 
         # Use `ty` to convert each solved value from the sympy type to either
