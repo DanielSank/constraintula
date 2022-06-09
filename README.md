@@ -1,7 +1,7 @@
 # constraintula
 
 ```python
-import attr
+import attrs
 import constraintula
 import numpy as np
 
@@ -11,7 +11,7 @@ area, radius = constraintula.symbols('area radius')
 
 
 @constraintula.constrain([area - PI * radius**2])
-@attr.dataclass(frozen=True)
+@attrs.define(frozen=True)  # or `@attrs.frozen`
 class Circle:
     radius: float
     area: float
