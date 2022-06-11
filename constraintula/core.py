@@ -315,12 +315,12 @@ def constrain(constraints: Sequence[Expr]) -> Callable[[Type], Type]:
     parameters and all values will be passed to the underlying function or
     class constructor.
 
-    For classes, this can be used with the attr library for optimally DRY code:
+    For classes, this can be used with the attrs library for optimally DRY code:
 
         radius, area = constraintula.symbols('radius area')
 
         @constrain([area - pi * radius**2])
-        @attr.dataclass(frozen=True)
+        @attrs.dataclass(frozen=True)
         class Circle:
             radius: float
             area: float
@@ -328,7 +328,7 @@ def constrain(constraints: Sequence[Expr]) -> Callable[[Type], Type]:
         circle_by_area = Circle(area=4)
         circle_by_radius = Circle(radius=1)
 
-    Using constrain in combination with the attr library makes mypy happy. The
+    Using constrain in combination with the attrs library makes mypy happy. The
     two variants shown below require explicit signals to tell the typechecker
     that we know what we're doing.
 

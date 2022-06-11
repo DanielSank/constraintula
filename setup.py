@@ -37,7 +37,6 @@ with open(README_FILENAME, "rt") as description_file:
 
 
 requirements = [
-    'attr',
     'numpy',
     'sympy',
     'typing; python_version < "3.5.0"',
@@ -56,6 +55,7 @@ setuptools.setup(
     install_requires=requirements,
     extras_require={
         'dev': [
+            'attrs',
             'pytest',
         ],
     },

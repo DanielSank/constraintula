@@ -15,7 +15,7 @@
 import collections
 import math
 
-import attr
+import attrs
 import numpy as np
 import pytest
 from sympy import Symbol
@@ -42,7 +42,7 @@ class Circle:
         return PI * self.radius ** 2
 
 
-@attr.dataclass
+@attrs.define
 class Foo:
     x: float
     y: float
@@ -102,7 +102,7 @@ def test_constrain_with_attr():
     x, y, z = constraintula.symbols('x y z')
 
     @constraintula.constrain([x * y - z])
-    @attr.dataclass(frozen=True)
+    @attrs.define(frozen=True)
     class Bar:
         x: float
         y: float
@@ -184,7 +184,7 @@ def test_constrain_with_ints():
     x, y, z = constraintula.symbols('x y z')
 
     @constraintula.constrain([x * y - z])
-    @attr.dataclass(frozen=True)
+    @attrs.define(frozen=True)
     class Bar:
         x: int
         y: int
@@ -199,7 +199,7 @@ def test_constrain_with_mixed_types():
     x, y, z = constraintula.symbols('x y z')
 
     @constraintula.constrain([x * y - z])
-    @attr.dataclass(frozen=True)
+    @attrs.define(frozen=True)
     class Bar:
         x: int
         y: float
